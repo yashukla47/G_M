@@ -8,7 +8,7 @@ import "./utils/Address.sol";
 /**
  * @title Reference implementation of the ERC223 standard token.
  */
-contract ERC223Token is IERC223 {
+contract ERC223 is IERC223 {
     using SafeMath for uint;
 
     /**
