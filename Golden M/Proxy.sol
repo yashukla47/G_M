@@ -1,4 +1,4 @@
-pragma solidity ^0.5.1;
+ pragma solidity ^0.5.1;
  
  import "./math/SafeMath.sol";
  import "./Vault.sol";
@@ -10,8 +10,11 @@ pragma solidity ^0.5.1;
     
     address VaultAddress;
     mapping (address => bool) public isAdmin;
+    mapping (address => bool) public isAccountant;
     mapping (address => bool) public isKyc;
     mapping (address => bool) public isTokenAddress;
+    mapping (address => bool) public isVaultAddress;
+    mapping (address => address) public AccountantVaultAddress;
     mapping (address => uint) public referrerLimit;
     mapping (address => uint) public transferBalance;
     mapping (address => mapping(uint => uint)) public cycleLimit;
@@ -19,6 +22,7 @@ pragma solidity ^0.5.1;
     mapping (uint => address) public tokenAddress;
     mapping (address => uint) public cycleNumber;
     mapping (uint => uint) public lockingEndTime; 
+    
 
     
     address[] public AdminsArray;
@@ -33,10 +37,18 @@ pragma solidity ^0.5.1;
     event LogTokenAddressAdded(uint _CycleNumber, address _TokenAddress, address _by);
     event LogTokenAddressRemoved(uint indexed _CycleNumber, address _TokenAddress, address _by);
     
+    address[] public VaultAddressArray;
+    event LogVaultAddressAdded( address _VaultAddress, address _by);
+    event LogVaultAddressRemoved( address _VaultAddress, address _by);
+    
+    address[] public AccountantsArray;
+    event LogAccountantAdded(address indexed _Accountant, address _by);
+    event LogAccountantRemoved(address indexed _Accountant, address _by);
+    
+    event LogAccountantVaultAddressUpdated(address _ValultAddress,address indexed _AccountantAddress, address _by);
     
     event LogLockingEndTimeupdated(uint indexed _CycleNumber, uint _LockingEndTime, address _by);
     
-   
     event LogCycleStartTimeupdated(uint indexed _CycleNumber, uint _CycleStartTime, address _by);
    
     event LogValidateAndExecute (uint _CycleNumber,  uint _Amount, address indexed _InvestorAddress, address _ReferrerAddress, address _by);   
@@ -52,6 +64,11 @@ pragma solidity ^0.5.1;
     
     modifier onlyAdmin(){
         require(isAdmin[msg.sender], "Config:: NOT_ADMIN");
+        _;
+    }
+    
+    modifier onlyAccountant(){
+        require(isAccountant[msg.sender], "Config:: NOT_ACCOUNTANT");
         _;
     }
     
@@ -114,6 +131,56 @@ pragma solidity ^0.5.1;
     }
     
     
+       
+   function getAllAccountant()
+        public
+        view
+        returns(address[] memory)
+    {
+        return AccountantsArray;
+    }
+
+    function addAccountant
+        (
+            address _Accountant
+        )
+            external
+            addressValid(_Accountant)
+            onlyAdmin
+        {   
+            require(!isAccountant[_Accountant], "vault:: addAccountant ACCOUNT_ALREADY_EXISTS");
+    
+            AccountantsArray.push(_Accountant);
+            isAccountant[_Accountant] = true;
+    
+            emit LogAccountantAdded(_Accountant, msg.sender);
+        }
+    
+    function removeAccountant
+    (
+        address _Accountant
+    ) 
+        external
+        addressValid(_Accountant)
+        onlyAdmin
+    {   
+        require(isAccountant[_Accountant], "Config::removeAdmin ADMIN_DOES_NOT_EXIST");
+        require(msg.sender != _Accountant, "Config::removeAdmin ADMIN_NOT_AUTHORIZED");
+
+        isAccountant[_Accountant] = false;
+
+        for (uint i = 0; i < AccountantsArray.length - 1; i++) {
+            if (AccountantsArray[i] == _Accountant) {
+                AccountantsArray[i] = AccountantsArray[AccountantsArray.length - 1];
+                AccountantsArray.length -= 1;
+                break;
+            }
+        }  
+
+        emit LogAccountantRemoved(_Accountant, msg.sender);
+    }
+    
+    
     function getAllKycs()
         public
         view
@@ -162,7 +229,6 @@ pragma solidity ^0.5.1;
         emit LogKycRemoved(_Kyc, msg.sender);
     }
     
-   
    
    
    
@@ -219,6 +285,57 @@ pragma solidity ^0.5.1;
         emit LogTokenAddressRemoved(_CycleNumber, _TokenAddress, msg.sender);
     }
     
+    
+    
+     function getAllVaultAddresses()
+        public
+        view
+        returns(address[] memory)
+    {
+        return VaultAddressArray;
+    }
+
+    function addVaultAddress
+        (
+           address _VaultAddress
+        )
+            external
+            onlyAdmin
+            addressValid(_VaultAddress)
+        {   
+            require(!isVaultAddress[_VaultAddress], "Proxy::addVaultAddress VaultAddress_ALREADY_EXISTS");
+    
+            VaultAddressArray.push(_VaultAddress);
+            isVaultAddress[_VaultAddress] = true;
+    
+            emit LogVaultAddressAdded( _VaultAddress, msg.sender);
+        }
+    
+    function removeVaultAddress
+    (
+        address _VaultAddress
+    ) 
+        external
+        onlyAdmin
+        addressValid(_VaultAddress)
+    {   
+        require(isVaultAddress[_VaultAddress], "Proxy::removeVaultAddress VAULT_ADDRESS_DOES_NOT_EXIST");
+       
+
+        isVaultAddress[_VaultAddress] = false;
+
+        for (uint i = 0; i < VaultAddressArray.length - 1; i++) {
+            if (VaultAddressArray[i] == _VaultAddress) {
+                VaultAddressArray[i] = VaultAddressArray[VaultAddressArray.length - 1];
+                VaultAddressArray.length -= 1;
+                break;
+            }
+        }
+
+        emit LogVaultAddressRemoved( _VaultAddress, msg.sender);
+    }
+    
+    
 
     function updateLockingEndtime
         (
@@ -248,18 +365,19 @@ pragma solidity ^0.5.1;
         }
         
         
-    function updateVaultAddress
+  function updateVaultAddressForAccountant
     (
-    address _ValultAddress
+    address _ValultAddress,
+    address _AccountantAddress
     )
     public
     onlyAdmin
     {
-       VaultAddress = _ValultAddress; 
-       emit LogVaultAddressChanged(_ValultAddress, msg.sender);
+       AccountantVaultAddress[_AccountantAddress] = _ValultAddress; 
+       emit LogAccountantVaultAddressUpdated(_ValultAddress, _AccountantAddress, msg.sender);
     }
    
-  
+   
     
     function validateAndExecute 
         (
@@ -269,12 +387,10 @@ pragma solidity ^0.5.1;
         address _ReferrerAddress
         )
         external
-        onlyAdmin
+        onlyAccountant
         addressValid(_InvestorAddress)
         {
         require(_InvestorAddress != _ReferrerAddress, "Proxy::ValidateAndExecute investor equals Referrer");
-        // require(cycleStartTime[_CycleNumber+1] >= now, "Proxy::ValidateAndExecute cycle over");
-        // require(now >= cycleStartTime[_CycleNumber], "Proxy::ValidateAndExecute cycle yet to start");
         require((uint(100000)).sub(cycleLimit[_InvestorAddress][_CycleNumber]) >=_Amount, "Proxy::ValidateAndExecute cycle limit reached");
         if (_ReferrerAddress != address(0))
         {       
@@ -308,8 +424,9 @@ pragma solidity ^0.5.1;
     )
     public 
     {
-       require(msg.sender == VaultAddress, "proxy:: UpdateTransferBalance NOT_AUTHORIZED" );
+       require( isVaultAddress[msg.sender], "proxy:: UpdateTransferBalance VAULT_NOT_AUTHORIZED" );
        transferBalance[_To] = transferBalance[_To].sub(_Amount);
         
     }
 }
+    
