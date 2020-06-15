@@ -1,1 +1,110 @@
 
+[
+	{
+		"inputs": [
+			{
+				"internalType": "address",
+				"name": "_ProxyAddress",
+				"type": "address"
+			}
+		],
+		"payable": false,
+		"stateMutability": "nonpayable",
+		"type": "constructor"
+	},
+	{
+		"anonymous": false,
+		"inputs": [
+			{
+				"indexed": false,
+				"internalType": "address",
+				"name": "_To",
+				"type": "address"
+			},
+			{
+				"indexed": false,
+				"internalType": "uint256",
+				"name": "_Amount",
+				"type": "uint256"
+			},
+			{
+				"indexed": false,
+				"internalType": "address",
+				"name": "_by",
+				"type": "address"
+			}
+		],
+		"name": "LogTransferToken",
+		"type": "event"
+	},
+	{
+		"anonymous": false,
+		"inputs": [
+			{
+				"indexed": false,
+				"internalType": "uint256",
+				"name": "_Amount",
+				"type": "uint256"
+			},
+			{
+				"indexed": false,
+				"internalType": "address",
+				"name": "_ValutAddress",
+				"type": "address"
+			},
+			{
+				"indexed": false,
+				"internalType": "address",
+				"name": "_by",
+				"type": "address"
+			}
+		],
+		"name": "Logwithdraw",
+		"type": "event"
+	},
+	{
+		"constant": false,
+		"inputs": [
+			{
+				"internalType": "address",
+				"name": "_To",
+				"type": "address"
+			},
+			{
+				"internalType": "address",
+				"name": "_TokenAddress",
+				"type": "address"
+			},
+			{
+				"internalType": "uint256",
+				"name": "_Amount",
+				"type": "uint256"
+			}
+		],
+		"name": "transferTokens",
+		"outputs": [],
+		"payable": false,
+		"stateMutability": "nonpayable",
+		"type": "function"
+	},
+	{
+		"constant": false,
+		"inputs": [
+			{
+				"internalType": "uint256",
+				"name": "_Amount",
+				"type": "uint256"
+			},
+			{
+				"internalType": "address",
+				"name": "_TokenAddress",
+				"type": "address"
+			}
+		],
+		"name": "withdraw",
+		"outputs": [],
+		"payable": false,
+		"stateMutability": "nonpayable",
+		"type": "function"
+	}
+]
